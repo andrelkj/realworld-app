@@ -10,6 +10,7 @@ module.exports = defineConfig({
     },
 
     baseUrl: "https://conduit.bondaracademy.com/",
+    // APIUrl: "https://condui-api.bondaracademy.com/"
     // specPattern: 'cypress/e2e/**/*.spec.{js,jsx,ts,tsx}' - optional to change the files naming
   },
 });
