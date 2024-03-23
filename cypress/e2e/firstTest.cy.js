@@ -97,13 +97,6 @@ describe("Test with backend", () => {
   });
 
   it.only("delete new article from the global feed", () => {
-    const userCredentials = {
-      user: {
-        email: "cyapitest@test.coms",
-        password: "P@ssw0rD!!",
-      },
-    };
-
     const bodyRequest = {
       article: {
         title: "Title",
@@ -113,35 +106,29 @@ describe("Test with backend", () => {
       },
     };
 
-    cy.request(
-      "POST",
-      "https://conduit-api.bondaracademy.com/api/users/login",
-      userCredentials
-    )
-      .its("body")
-      .then((body) => {
-        const token = body.user.token;
-
-        cy.request({
-          url: "https://conduit-api.bondaracademy.com/api/articles/",
-          headers: { Authorization: "Token " + token },
-          method: "POST",
-          body: bodyRequest,
-        }).then((response) => {
-          expect(response.status).to.equal(201);
-        });
-
-        cy.contains("Global Feed").click();
-        cy.get(".preview-link").first().click();
-        cy.get(".article-actions").contains("Delete Article").click();
-
-        cy.request({
-          url: "https://conduit-api.bondaracademy.com/api/articles?limit=10&offset=0",
-          headers: { Authorization: "Token " + token },
-          method: "GET",
-        })
-          .its("body")
-          .then((body) => {expect(body.articles[0].title).not.to.equal('Title')});
+    cy.get("@token").then((token) => {
+      cy.request({
+        url: "https://conduit-api.bondaracademy.com/api/articles/",
+        headers: { Authorization: "Token " + token },
+        method: "POST",
+        body: bodyRequest,
+      }).then((response) => {
+        expect(response.status).to.equal(201);
       });
+
+      cy.contains("Global Feed").click();
+      cy.get(".preview-link").first().click();
+      cy.get(".article-actions").contains("Delete Article").click();
+
+      cy.request({
+        url: "https://conduit-api.bondaracademy.com/api/articles?limit=10&offset=0",
+        headers: { Authorization: "Token " + token },
+        method: "GET",
+      })
+        .its("body")
+        .then((body) => {
+          expect(body.articles[0].title).not.to.equal("Title");
+        });
+    });
   });
 });
