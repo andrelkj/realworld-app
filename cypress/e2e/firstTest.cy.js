@@ -1,8 +1,6 @@
 describe("Test with backend", () => {
   beforeEach("login to application", () => {
-    cy.intercept("GET", "https://conduit-api.bondaracademy.com/api/tags", {
-      fixture: "tags.json",
-    });
+    cy.intercept({ method: "Get", path: "tags" }, { fixture: "tags.json" });
     cy.loginToApplication();
   });
 
@@ -33,20 +31,54 @@ describe("Test with backend", () => {
     });
   });
 
-  it("verify popular tags are displayed", () => {
+  it("intercepting and modifying the request and response", () => {
+    // first define what to intercept
+    // intercept the post request from articles and change description
+    cy.intercept("POST", "**/articles/", (req) => {
+      req.body.article.description = "This is the changed description";
+    }).as("postArticles");
+
+    // cy.intercept("POST", "**/articles/", (req) => {
+    //   req.reply((res) => {
+    //     expect(res.body.article.description).to.equal("This is a description");
+    //     res.body.article.description = "This is the changed description";
+    //   });
+    // }).as("postArticles");
+
+    // and then the action
+    cy.contains("New Article").click();
+    cy.get('[formcontrolname="title"]').type("This is the title");
+    cy.get('[formcontrolname="description"]').type("This is a description");
+    cy.get('[formcontrolname="body"]').type("This is a body of the article");
+    cy.contains("Publish Article").click();
+
+    // use the request
+    cy.wait("@postArticles");
+    cy.get("@postArticles").then((xhr) => {
+      console.log(xhr);
+      expect(xhr.response.statusCode).to.equal(201);
+      expect(xhr.request.body.article.body).to.equal(
+        "This is a body of the article"
+      );
+      expect(xhr.response.body.article.description).to.equal(
+        "This is the changed description"
+      );
+    });
+  });
+
+  it("should gave tags with routing objects", () => {
     cy.get(".tag-list")
       .should("contain", "cypress")
       .and("contain", "automation")
       .and("contain", "testing");
   });
 
-  it.only("verify global feed likes count", () => {
-    cy.intercept(
-      "GET",
-      "https://conduit-api.bondaracademy.com/api/articles/feed*",
-      { articles: [], articlesCount: 0 }
-    );
-    cy.intercept("GET", "https://conduit-api.bondaracademy.com/api/articles*", {
+  it("verify global feed likes count", () => {
+    cy.intercept("GET", "**/articles/feed*", {
+      articles: [],
+      articlesCount: 0,
+    });
+    cy.intercept("GET", "**/articles*", {
       fixture: "articles.json",
     });
 
@@ -56,11 +88,60 @@ describe("Test with backend", () => {
       expect(heartList[1]).to.contain("5");
     });
 
-    cy.fixture("articles").then(file => {
-      const articleLink = file.articles[1].slug
-      file.articles[1].favoritesCount = 6
-      cy.intercept('POST', 'https://conduit-api.bondaracademy.com/api/articles/'+articleLink+'/favorite', file)
+    cy.fixture("articles").then((file) => {
+      const articleLink = file.articles[1].slug;
+      file.articles[1].favoritesCount = 6;
+      cy.intercept("POST", "**/articles/" + articleLink + "/favorite", file);
     });
-    cy.get('app-article-list button').eq(1).click().should('contain', '6')
+    cy.get("app-article-list button").eq(1).click().should("contain", "6");
+  });
+
+  it.only("delete new article from the global feed", () => {
+    const userCredentials = {
+      user: {
+        email: "cyapitest@test.coms",
+        password: "P@ssw0rD!!",
+      },
+    };
+
+    const bodyRequest = {
+      article: {
+        title: "Title",
+        description: "Description",
+        body: "Article body",
+        tagList: [],
+      },
+    };
+
+    cy.request(
+      "POST",
+      "https://conduit-api.bondaracademy.com/api/users/login",
+      userCredentials
+    )
+      .its("body")
+      .then((body) => {
+        const token = body.user.token;
+
+        cy.request({
+          url: "https://conduit-api.bondaracademy.com/api/articles/",
+          headers: { Authorization: "Token " + token },
+          method: "POST",
+          body: bodyRequest,
+        }).then((response) => {
+          expect(response.status).to.equal(201);
+        });
+
+        cy.contains("Global Feed").click();
+        cy.get(".preview-link").first().click();
+        cy.get(".article-actions").contains("Delete Article").click();
+
+        cy.request({
+          url: "https://conduit-api.bondaracademy.com/api/articles?limit=10&offset=0",
+          headers: { Authorization: "Token " + token },
+          method: "GET",
+        })
+          .its("body")
+          .then((body) => {expect(body.articles[0].title).not.to.equal('Title')});
+      });
   });
 });
