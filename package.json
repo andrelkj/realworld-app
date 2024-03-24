@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "cypress:run": "npx cypress run",
-    "cypress:e2e": "start-test start http-get://localhost:4200 cypress:run"
+    "cypress:e2e": "start-test start http-get://localhost:4200 cypress:run",
+    "cy:open_dev": "npx cypress open --env username=cytestdev@test.com,password=000",
+    "cy:open_process": "npx cypress open --env username=cytestqa@test.com,password=Welcome999"
   },
   "author": "",
   "license": "ISC",
