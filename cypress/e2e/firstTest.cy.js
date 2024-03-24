@@ -96,7 +96,7 @@ describe("Test with backend", () => {
     cy.get("app-article-list button").eq(1).click().should("contain", "6");
   });
 
-  it.only("delete new article from the global feed", () => {
+  it("delete new article from the global feed", () => {
     const bodyRequest = {
       article: {
         title: "Title",
